@@ -25,6 +25,8 @@ jobs:
 
   deploy:
     needs: define-environment
+    permissions:
+      id-token: write
     uses: "./.github/workflows/deploy.yaml"
     if : ${{ needs.define-environment.outputs.env_name }}
     with:
