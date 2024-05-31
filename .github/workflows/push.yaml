@@ -1,0 +1,33 @@
+name: Commit Checks
+on: push
+jobs:
+  define-environment:
+    name: Set ✨ environment ✨ based on the branch 🌳
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set the environment
+        id: define_environment
+        run: |
+          if [ "${{ github.ref_name }}" == "main" ]; then
+            echo "env_name=staging" >> $GITHUB_OUTPUT
+          elif [ "${{ github.ref_name }}" == "dev" ]; then
+            echo "env_name=development" >> $GITHUB_OUTPUT
+          elif [ "${{ github.ref_name }}" == "production" ]; then
+            echo "env_name=production" >> $GITHUB_OUTPUT
+          else
+            echo "No environment associated with ${GITHUB_REF##*/} branch"
+          fi
+      - name: Print the environment
+        if: ${{ steps.define_environment.outputs.env_name }}
+        run: echo "The environment is ${{ steps.define_environment.outputs.env_name }}"
+    outputs:
+      env_name: ${{ steps.define_environment.outputs.env_name }}
+
+  deploy:
+    needs: define-environment
+    uses: "./.github/workflows/deploy.yaml"
+    if : ${{ needs.define-environment.outputs.env_name }}
+    with:
+      environment:  ${{ needs.define-environment.outputs.env_name }}
+      aws-region: "us-west-2"
+    secrets: inherit

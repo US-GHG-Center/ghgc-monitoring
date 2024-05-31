@@ -1,0 +1,8 @@
+apiVersion: 1
+datasources:
+  - name: CloudWatch
+    type: cloudwatch
+    jsonData:
+      authType: default
+      defaultRegion: $AWS_REGION
+      tracingDatasourceUid: awsxray

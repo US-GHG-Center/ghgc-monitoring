@@ -1,0 +1,190 @@
+extensions:
+  health_check:
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+  statsd:
+    endpoint: 0.0.0.0:8125
+    aggregation_interval: 60s
+  awsecscontainermetrics:
+
+processors:
+  tail_sampling:
+    decision_wait: 30s
+    num_traces: 100
+    expected_new_traces_per_sec: 0
+    policies:
+      [
+        {
+          name: errors-policy,
+          type: status_code,
+          status_code: { status_codes: [ERROR] },
+        },
+        {
+          name: search-requests,
+          type: string_attribute,
+          string_attribute: { key: http.route, values: [/stac/search] },
+        },
+        { name: high-latency, type: latency, latency: { threshold_ms: 4000 } },
+        {
+          name: everything-else,
+          type: and,
+          and:
+            {
+              and_sub_policy:
+                [
+                  {
+                    name: randomized-policy,
+                    type: probabilistic,
+                    probabilistic: { sampling_percentage: 10 },
+                  },
+                ],
+            },
+        },
+      ]
+  batch/traces:
+    timeout: 1s
+    send_batch_size: 10
+  batch/metrics:
+    timeout: 60s
+  attributes/traces:
+    actions:
+      - key: aws.log.group.names
+        from_attribute: otel.resource.aws.log.group.names
+        action: insert
+
+  resource:
+    attributes:
+      - key: ClusterName
+        from_attribute: aws.ecs.cluster.name
+        action: insert
+      - key: aws.ecs.cluster.name
+        action: delete
+      - key: ServiceName
+        from_attribute: aws.ecs.service.name
+        action: insert
+      - key: aws.ecs.service.name
+        action: delete
+      - key: TaskId
+        from_attribute: aws.ecs.task.id
+        action: insert
+      - key: aws.ecs.task.id
+        action: delete
+      - key: TaskDefinitionFamily
+        from_attribute: aws.ecs.task.family
+        action: insert
+      - key: aws.ecs.task.family
+        action: delete
+      - key: TaskARN
+        from_attribute: aws.ecs.task.arn
+        action: insert
+      - key: aws.ecs.task.arn
+        action: delete
+      - key: DockerName
+        from_attribute: aws.ecs.docker.name
+        action: insert
+      - key: aws.ecs.docker.name
+        action: delete
+      - key: TaskDefinitionRevision
+        from_attribute: aws.ecs.task.version
+        action: insert
+      - key: aws.ecs.task.version
+        action: delete
+      - key: PullStartedAt
+        from_attribute: aws.ecs.task.pull_started_at
+        action: insert
+      - key: aws.ecs.task.pull_started_at
+        action: delete
+      - key: PullStoppedAt
+        from_attribute: aws.ecs.task.pull_stopped_at
+        action: insert
+      - key: aws.ecs.task.pull_stopped_at
+        action: delete
+      - key: AvailabilityZone
+        from_attribute: cloud.zone
+        action: insert
+      - key: cloud.zone
+        action: delete
+      - key: LaunchType
+        from_attribute: aws.ecs.task.launch_type
+        action: insert
+      - key: aws.ecs.task.launch_type
+        action: delete
+      - key: Region
+        from_attribute: cloud.region
+        action: insert
+      - key: cloud.region
+        action: delete
+      - key: AccountId
+        from_attribute: cloud.account.id
+        action: insert
+      - key: cloud.account.id
+        action: delete
+      - key: DockerId
+        from_attribute: container.id
+        action: insert
+      - key: container.id
+        action: delete
+      - key: ContainerName
+        from_attribute: container.name
+        action: insert
+      - key: container.name
+        action: delete
+      - key: Image
+        from_attribute: container.image.name
+        action: insert
+      - key: container.image.name
+        action: delete
+      - key: ImageId
+        from_attribute: aws.ecs.container.image.id
+        action: insert
+      - key: aws.ecs.container.image.id
+        action: delete
+      - key: ExitCode
+        from_attribute: aws.ecs.container.exit_code
+        action: insert
+      - key: aws.ecs.container.exit_code
+        action: delete
+      - key: CreatedAt
+        from_attribute: aws.ecs.container.created_at
+        action: insert
+      - key: aws.ecs.container.created_at
+        action: delete
+      - key: StartedAt
+        from_attribute: aws.ecs.container.started_at
+        action: insert
+      - key: aws.ecs.container.started_at
+        action: delete
+      - key: FinishedAt
+        from_attribute: aws.ecs.container.finished_at
+        action: insert
+      - key: aws.ecs.container.finished_at
+        action: delete
+      - key: ImageTag
+        from_attribute: container.image.tag
+        action: insert
+      - key: container.image.tag
+        action: delete
+
+exporters:
+  otlp:
+    endpoint: "api.honeycomb.io:443"
+    headers:
+      "x-honeycomb-team": "##HONEYCOMB_API_KEY##"
+  logging:
+    verbosity: detailed
+  awsxray:
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [tail_sampling, batch/traces, attributes/traces]
+      exporters: [##TRACE_EXPORTERS##]
+
+  extensions: [health_check]

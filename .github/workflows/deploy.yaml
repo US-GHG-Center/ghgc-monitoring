@@ -1,0 +1,64 @@
+name: Deploy
+
+permissions:
+  id-token: write
+  contents: read
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Environment to deploy to
+        type: environment
+        required: true
+      aws-region:
+        description: AWS region to deploy to
+        type: string
+        required: false
+        default: us-west-2
+
+
+  workflow_call:
+    inputs:
+      environment:
+        type: string
+        required: true
+      aws-region:
+        type: string
+        required: false
+        default: us-west-2
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+
+    env:
+      AWS_REGION: ${{ inputs.aws-region || vars.AWS_REGION }}
+      VPC_ID: ${{ vars.VPC_ID }}
+      STAGE: ${{ vars.STAGE }}
+      PERMISSIONS_BOUNDARY_ARN: ${{ vars.PERMISSIONS_BOUNDARY_ARN }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - run: pip install -r requirements.txt
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          role-to-assume: ${{ vars.DEPLOYMENT_ROLE_ARN }}
+          role-session-name: ${{ github.actor }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Deploy
+        run: |
+          npx cdk deploy GHGC-grafana-${{ vars.STAGE }} \
+            --require-approval never
