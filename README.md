@@ -12,7 +12,6 @@ All significant design decisions are captured in Architectural Decision Records 
 * [#2 Testing Strategy](./docs/adr/002-testing-strategy.md)
 
 ## Deployment
-
 Deployment of monitoring services is managed via [AWS CDK](https://aws.amazon.com/cdk/).
 
 ### dotenv
