@@ -1,4 +1,4 @@
-from typing import Dict, Optional, Sequence, List, Union
+from typing import Dict, Optional, Sequence, Union
 
 from constructs import Construct
 from aws_cdk import (
@@ -54,7 +54,8 @@ class GrafanaStack(Stack):
         service = self.build_service(
             vpc=vpc,
             container_name=container_name,
-            cluster_name=settings.grafana_stack_name
+            cluster_name=settings.grafana_stack_name,
+            stage=settings.stage
         )
 
         container = service.task_definition.find_container(container_name)
@@ -106,7 +107,8 @@ class GrafanaStack(Stack):
         self,
         vpc: ec2.Vpc,
         cluster_name: str,
-        container_name: str
+        container_name: str,
+        stage: str = "dev"
     ):
         # Production has a public NAT Gateway subnet, which causes the
         # default load balancer creation to fail with too many subnets
@@ -114,7 +116,7 @@ class GrafanaStack(Stack):
         # allow us to select subnets and avoid the issue.
         load_balancer: elbv2.ApplicationLoadBalancer = elbv2.ApplicationLoadBalancer(
             self,
-            "load-balancer",
+            f"{stage}-load-balancer",
             vpc=vpc,
             internet_facing=True,
             vpc_subnets=ec2.SubnetSelection(
@@ -127,7 +129,7 @@ class GrafanaStack(Stack):
             "Service",
             cluster=ecs.Cluster(
                 self,
-                "cluster",
+                f"{stage}-cluster",
                 cluster_name=cluster_name,
                 vpc=vpc,
             ),
@@ -136,7 +138,7 @@ class GrafanaStack(Stack):
                 one_per_az=True,
                 subnet_type=ec2.SubnetType.PRIVATE_ISOLATED,
             ),
-            service_name="grafana",
+            service_name=f"{stage}-grafana",
             desired_count=1,
             task_image_options=ecs_patterns.ApplicationLoadBalancedTaskImageOptions(
                 image=ecs.ContainerImage.from_asset("grafana"),
