@@ -32,6 +32,7 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment }}
+    name: Deploy to ${{ inputs.environment }} 🚀
 
     env:
       AWS_REGION: ${{ inputs.aws-region || vars.AWS_REGION }}
