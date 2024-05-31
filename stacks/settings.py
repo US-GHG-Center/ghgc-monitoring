@@ -120,9 +120,7 @@ class Settings(BaseSettings):
     @property
     def grafana_stack_name(self) -> str:
         return self.stack_name("grafana")
-    @property
-    def private_subnet_ids(self) -> list:
-        return [self.private_subnet_id1, self.private_subnet_id2]
+
     @property
     def otel_stack_name(self) -> str:
         return self.stack_name("otel")

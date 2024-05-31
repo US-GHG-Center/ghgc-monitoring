@@ -48,17 +48,13 @@ class GrafanaStack(Stack):
 
         vpc = ec2.Vpc.from_lookup(self, "vpc", vpc_id=settings.vpc_id)
 
-        private_subnet_ids = settings.private_subnet_ids
 
         container_name = "grafana"
 
         service = self.build_service(
             vpc=vpc,
-            private_subnet_ids = private_subnet_ids,
             container_name=container_name,
-            cluster_name=settings.grafana_stack_name,
-            subnet_cidr_mask=settings.grafana_alb_subnet_mask,
-
+            cluster_name=settings.grafana_stack_name
         )
 
         container = service.task_definition.find_container(container_name)
@@ -109,10 +105,8 @@ class GrafanaStack(Stack):
     def build_service(
         self,
         vpc: ec2.Vpc,
-        private_subnet_ids: List[ec2.Subnet],
         cluster_name: str,
-        container_name: str,
-        subnet_cidr_mask: int = 20
+        container_name: str
     ):
         # Production has a public NAT Gateway subnet, which causes the
         # default load balancer creation to fail with too many subnets
@@ -125,8 +119,7 @@ class GrafanaStack(Stack):
             internet_facing=True,
             vpc_subnets=ec2.SubnetSelection(
                 one_per_az=True,
-                subnet_type=ec2.SubnetType.PUBLIC,
-                #subnet_filters=[ec2.SubnetFilter.by_cidr_mask(subnet_cidr_mask)],
+                subnet_type=ec2.SubnetType.PUBLIC
             ),
         )
         service = ecs_patterns.ApplicationLoadBalancedFargateService(
