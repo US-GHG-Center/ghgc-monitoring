@@ -83,6 +83,8 @@ class GrafanaStack(Stack):
                 else f"https://{distro.distribution_domain_name}"
             ),
         }
+        print(f"<====> {settings.github_oauth_secret_name}")
+        print(settings.github_admin_group)
         if settings.github_oauth_secret_name:
             env.update(
                 self.github_oauth_settings(
