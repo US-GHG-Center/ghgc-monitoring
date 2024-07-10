@@ -9,10 +9,6 @@ jobs:
         id: define_environment
         run: |
           if [ "${{ github.ref_name }}" == "main" ]; then
-            echo "env_name=staging" >> $GITHUB_OUTPUT
-          elif [ "${{ github.ref_name }}" == "dev" ]; then
-            echo "env_name=development" >> $GITHUB_OUTPUT
-          elif [ "${{ github.ref_name }}" == "production" ]; then
             echo "env_name=production" >> $GITHUB_OUTPUT
           else
             echo "No environment associated with ${GITHUB_REF##*/} branch"
