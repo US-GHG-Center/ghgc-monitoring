@@ -51,10 +51,22 @@ class GrafanaStack(Stack):
 
         container_name = "grafana"
 
+        cloudfront_certificate = acm.Certificate.from_certificate_arn(
+
+            self, "East Certificate", settings.cloudfront_certificate_arn
+
+        )
+
+        grafana_certificate = acm.Certificate.from_certificate_arn(
+
+            self, "West Certificate", settings.grafana_certificate_arn
+
+        )
         service = self.build_service(
             vpc=vpc,
             container_name=container_name,
-            cluster_name=settings.grafana_stack_name
+            cluster_name=settings.grafana_stack_name,
+            certificate=grafana_certificate,
         )
 
         container = service.task_definition.find_container(container_name)
@@ -71,15 +83,16 @@ class GrafanaStack(Stack):
         distro = self.create_cloudfront_distribution(
             lb=service.load_balancer,
             domain_name=settings.grafana_domain_name,
-            certificate_arn=settings.grafana_certificate_arn,
+            certificate=cloudfront_certificate,
         )
 
         # Add environment variables to container
         env: EcsEnv = {
             envify("paths.data"): mount_point.container_path,
+            "FOOBAR2": "BARFOO",
             envify("server.root_url"): (
-                f"https://{settings.grafana_domain_name}" 
-                if settings.grafana_domain_name 
+                f"https://{settings.grafana_domain_name}"
+                if settings.grafana_domain_name
                 else f"https://{distro.distribution_domain_name}"
             ),
         }
@@ -106,7 +119,8 @@ class GrafanaStack(Stack):
         self,
         vpc: ec2.Vpc,
         cluster_name: str,
-        container_name: str
+        container_name: str,
+        certificate: acm.Certificate = None,
     ):
         # Production has a public NAT Gateway subnet, which causes the
         # default load balancer creation to fail with too many subnets
@@ -153,6 +167,23 @@ class GrafanaStack(Stack):
             path="/api/health",
             timeout=Duration.seconds(30),
             interval=Duration.seconds(60),
+        )
+
+        # Add HTTPS listener to the load balancer
+
+        load_balancer.add_listener(
+            "HTTPSListener",
+            port=443,
+            certificates=[certificate],
+            default_action=elbv2.ListenerAction.forward(
+                target_groups=[service.target_group]
+            ),
+        )
+
+        load_balancer.connections.security_groups[0].add_ingress_rule(
+
+            ec2.Peer.any_ipv4(), ec2.Port.tcp(443), "Allow HTTPS traffic"
+
         )
 
         # Ensure service can interact with other AWS resources
@@ -277,7 +308,7 @@ class GrafanaStack(Stack):
         self,
         lb: elbv2.ILoadBalancerV2,
         domain_name: Optional[str] = None,
-        certificate_arn: Optional[str] = None,
+        certificate: Optional[str] = None,
     ):
         return cloudfront.Distribution(
             self,
@@ -288,20 +319,15 @@ class GrafanaStack(Stack):
                 origin=origins.LoadBalancerV2Origin(
                     origin_id="grafana",
                     load_balancer=lb,
-                    protocol_policy=cloudfront.OriginProtocolPolicy.HTTP_ONLY,
+                    protocol_policy=cloudfront.OriginProtocolPolicy.HTTPS_ONLY,
                 ),
                 origin_request_policy=cloudfront.OriginRequestPolicy.ALL_VIEWER_AND_CLOUDFRONT_2022,
                 cache_policy=cloudfront.CachePolicy.CACHING_DISABLED,
                 allowed_methods=cloudfront.AllowedMethods.ALLOW_ALL,
+                viewer_protocol_policy=cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
             ),
             domain_names=[domain_name] if domain_name else [],
-            certificate=(
-                acm.Certificate.from_certificate_arn(
-                    self, "Certificate", certificate_arn
-                )
-                if certificate_arn
-                else None
-            ),
+            certificate=certificate,
         )
     def github_oauth_settings(
         self,

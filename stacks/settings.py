@@ -33,6 +33,9 @@ class Settings(BaseSettings):
 
     grafana_certificate_arn: Optional[str] = None
 
+    cloudfront_certificate_arn: Optional[str] = None
+
+
     permissions_boundary_arn: str
 
     # Github auth provider configuration
