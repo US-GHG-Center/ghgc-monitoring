@@ -17,7 +17,6 @@ on:
         required: false
         default: us-west-2
 
-
   workflow_call:
     inputs:
       environment:
@@ -42,12 +41,12 @@ jobs:
       PROJECT_NAME: ${{ vars.PROJECT_NAME }}
       HONEYCOMB_API_KEY: ${{ secrets.HONEYCOMB_API_KEY }}
       GH_OAUTH_SECRET_NAME: ${{ vars.GH_OAUTH_SECRET_NAME }}
-      GH_ALLOWED_ORGS: ${{ vars.GH_OAUTH_SECRET_NAME }}
-      GH_ADMIN_GROUP: ${{ vars.GH_OAUTH_SECRET_NAME }}
-      GH_EDITOR_GROUP: ${{ vars.GH_OAUTH_SECRET_NAME }}
-      GRAFANA_DOMAIN_NAME: ${{ vars.GH_OAUTH_SECRET_NAME }}
-      GRAFANA_CERTIFICATE_ARN: ${{ vars.GH_OAUTH_SECRET_NAME }}
-      CLOUDFRONT_CERTIFICATE_ARN: ${{ vars.GH_OAUTH_SECRET_NAME }}
+      GH_ALLOWED_ORGS: ${{ vars.GH_ALLOWED_ORGS }}
+      GH_ADMIN_GROUP: ${{ vars.GH_ADMIN_GROUP }}
+      GH_EDITOR_GROUP: ${{ vars.GH_EDITOR_GROUP }}
+      GRAFANA_DOMAIN_NAME: ${{ vars.GRAFANA_DOMAIN_NAME }}
+      GRAFANA_CERTIFICATE_ARN: ${{ vars.GRAFANA_CERTIFICATE_ARN }}
+      CLOUDFRONT_CERTIFICATE_ARN: ${{ vars.CLOUDFRONT_CERTIFICATE_ARN }}
 
 
     steps:
@@ -59,8 +58,7 @@ jobs:
         with:
           python-version: "3.11"
           cache: "pip"
-
-      - run: pip install -r requirements.txt
+        run: pip install -r requirements.txt
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v1
