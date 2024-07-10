@@ -89,7 +89,6 @@ class GrafanaStack(Stack):
         # Add environment variables to container
         env: EcsEnv = {
             envify("paths.data"): mount_point.container_path,
-            "FOOBAR2": "BARFOO",
             envify("server.root_url"): (
                 f"https://{settings.grafana_domain_name}"
                 if settings.grafana_domain_name
